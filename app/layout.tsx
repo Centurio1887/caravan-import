@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 })
 
 export const metadata: Metadata = {
-  title: 'Japan Import Rechner | Zoll & Steuer exakt berechnen',
+  title: 'Japan Import Rechner | JDM Teile Zoll berechnen & Steuer',
   description:
-    'Berechne kostenlos alle Importkosten für Autos und Waren aus Japan. Inklusive 10% Zoll, 19% Einfuhrumsatzsteuer und Versand.',
+    'Berechne kostenlos alle Importkosten für Autos und Waren aus Japan. JDM Teile Zoll berechnen, Autoteile Japan Zoll, inklusive 10% Zoll, 19% Einfuhrumsatzsteuer und Versand.',
   generator: 'v0.app',
   icons: {
     icon: [
