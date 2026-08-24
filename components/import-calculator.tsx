@@ -1,11 +1,11 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import useSWR from 'swr'
+import { useMemo, useState } from 'react'
 import { Check, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { CostRow } from '@/components/cost-row'
 import { NumberField } from '@/components/number-field'
+import type { ExchangeRate } from '@/lib/exchange-rate'
 
 const DUTY_RATE = 0.035
 const VAT_RATE = 0.19
@@ -24,40 +24,18 @@ function toNumber(value: string) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
 }
 
-type RateResponse = { rates?: { JPY?: number }; date?: string }
-
-const fetcher = (url: string): Promise<RateResponse> =>
-  fetch(url).then((res) => {
-    if (!res.ok) throw new Error('Kurs konnte nicht geladen werden')
-    return res.json()
-  })
-
-export function ImportCalculator() {
+export function ImportCalculator({ exchangeRate }: { exchangeRate: ExchangeRate }) {
   const [partPrice, setPartPrice] = useState('')
   const [shipping, setShipping] = useState('0')
-  const [rate, setRate] = useState(String(DEFAULT_RATE))
+  const [rate, setRate] = useState(String(exchangeRate.jpyPerEur || DEFAULT_RATE))
   const [editRate, setEditRate] = useState(false)
   const [rateEdited, setRateEdited] = useState(false)
   const [comparison, setComparison] = useState('')
 
-  const { data: liveRate } = useSWR<RateResponse>(
-    '/api/rate',
-    fetcher,
-    { revalidateOnFocus: false, shouldRetryOnError: true, errorRetryCount: 2 },
-  )
+  const liveLoaded = exchangeRate.live
 
-  const liveJpy = liveRate?.rates?.JPY
-  const liveLoaded = typeof liveJpy === 'number' && liveJpy > 0
-
-  // Apply the live rate once on load, unless the user has manually edited it.
-  useEffect(() => {
-    if (liveLoaded && !rateEdited) {
-      setRate(String(Math.round(liveJpy as number)))
-    }
-  }, [liveLoaded, liveJpy, rateEdited])
-
-  const liveDate = liveRate?.date
-    ? new Date(liveRate.date).toLocaleDateString('de-DE', {
+  const liveDate = exchangeRate.date
+    ? new Date(exchangeRate.date).toLocaleDateString('de-DE', {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',

@@ -3,6 +3,10 @@ import { RouteHeader } from '@/components/route-header'
 import { TipsSection } from '@/components/tips-section'
 import { FaqSection } from '@/components/faq-section'
 import { LegalFooter } from '@/components/legal-footer'
+import { getExchangeRate } from '@/lib/exchange-rate'
+
+// Refresh the server-rendered exchange rate hourly.
+export const revalidate = 3600
 
 const faqStructuredData = {
   '@context': 'https://schema.org',
@@ -43,7 +47,9 @@ const faqStructuredData = {
   ],
 }
 
-export default function Page() {
+export default async function Page() {
+  const exchangeRate = await getExchangeRate()
+
   return (
     <main className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col gap-8 px-4 py-8 sm:px-6 sm:py-12">
       <script
@@ -53,7 +59,7 @@ export default function Page() {
 
       <RouteHeader />
 
-      <ImportCalculator />
+      <ImportCalculator exchangeRate={exchangeRate} />
 
       <TipsSection />
 
