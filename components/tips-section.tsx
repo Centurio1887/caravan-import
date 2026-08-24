@@ -26,7 +26,7 @@ const tips = [
     icon: PackageCheck,
     title: 'Proxy-Kaufservice',
     text: 'ZenMarket kauft Teile für dich bei japanischen Shops, die keine Auslandslieferung anbieten, und leitet sie an dich weiter.',
-    href: '[ZENMARKET_AFFILIATE_LINK]',
+    href: 'https://zenmarket.jp',
     linkLabel: 'zenmarket.jp',
   },
 ]
