@@ -41,9 +41,9 @@ export function ImportCalculator() {
   const [comparison, setComparison] = useState('')
 
   const { data: liveRate } = useSWR<RateResponse>(
-    'https://api.frankfurter.dev/v1/latest?from=EUR&to=JPY',
+    '/api/rate',
     fetcher,
-    { revalidateOnFocus: false, shouldRetryOnError: false },
+    { revalidateOnFocus: false, shouldRetryOnError: true, errorRetryCount: 2 },
   )
 
   const liveJpy = liveRate?.rates?.JPY
