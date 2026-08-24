@@ -32,6 +32,14 @@ const faqStructuredData = {
         text: 'Am Hafen können Hafengebühren, Kosten für die Unbedenklichkeitsbescheinigung, Lagergebühren sowie Bearbeitungs- und Abwicklungsgebühren des Spediteurs oder Paketdienstes anfallen.',
       },
     },
+    {
+      '@type': 'Question',
+      name: 'Lohnt sich der Import von Autoteilen aus Japan?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Für gängige Verschleißteile lohnt sich der Import wegen Zoll, Steuer und Versand meist nicht. Richtig interessant wird es bei Nischen- und JDM-Teilen, die in Deutschland gar nicht, nur schwer oder zu deutlich höheren Preisen erhältlich sind – hier sind trotz aller Importkosten oft spürbare Ersparnisse möglich. Mit dem Rechner oben siehst du sofort, ob sich der Import in deinem konkreten Fall auszahlt.',
+      },
+    },
   ],
 }
 

@@ -1,4 +1,4 @@
-import { ShoppingBag, ArrowLeftRight, Landmark, ArrowUpRight } from 'lucide-react'
+import { ShoppingBag, ArrowLeftRight, Landmark, PackageCheck, ArrowUpRight } from 'lucide-react'
 
 const tips = [
   {
@@ -21,6 +21,13 @@ const tips = [
     text: 'Bei DHL Express oder FedEx zahlst du Zoll und Steuer unkompliziert direkt an der Haustür bei Zustellung.',
     href: 'https://www.dhl.de',
     linkLabel: 'dhl.de',
+  },
+  {
+    icon: PackageCheck,
+    title: 'Proxy-Kaufservice',
+    text: 'ZenMarket kauft Teile für dich bei japanischen Shops, die keine Auslandslieferung anbieten, und leitet sie an dich weiter.',
+    href: '[ZENMARKET_AFFILIATE_LINK]',
+    linkLabel: 'zenmarket.jp',
   },
 ]
 

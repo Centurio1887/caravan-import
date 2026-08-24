@@ -69,6 +69,9 @@ export function RouteHeader() {
         <h1 className="text-balance text-3xl font-bold leading-tight tracking-tight text-foreground sm:text-4xl">
           Japan Import-Rechner für Autoteile
         </h1>
+        <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+          Entwickelt mit Praxiswissen aus der Speditionsbranche &bull; Inklusive Zoll &amp; Einfuhrumsatzsteuer
+        </p>
         <p className="text-pretty text-base leading-relaxed text-muted-foreground sm:text-lg">
           Finde in 3 Sekunden heraus, was dein Ersatzteil aus Japan inklusive Zoll
           und Steuern wirklich kostet.
