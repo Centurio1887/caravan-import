@@ -12,15 +12,14 @@ const faqStructuredData = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
   mainEntity: [
-    {
+       {
       '@type': 'Question',
       name: 'Wie viel Zoll fällt auf Autos aus Japan an?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'In der Regel gilt ein Zollsatz von 10% auf den Kaufpreis zzgl. der Transportkosten. Bei einzelnen KFZ-Ersatzteilen kann der Satz abweichen (oft ca. 3,5% im Rahmen des EU-Japan-Handelsabkommens EPA).',
+        text: 'Dank des EU-Japan-Freihandelsabkommens (EPA) gilt ein Präferenzzollsatz von 0%, wenn der japanische Verkäufer eine gültige Ursprungserklärung auf der Rechnung ausstellt. Fehlt diese Erklärung, greift der reguläre Zollsatz von 6,5% auf Kfz-Ersatzteile.',
       },
     },
-    {
       '@type': 'Question',
       name: 'Wie wird die Einfuhrumsatzsteuer berechnet?',
       acceptedAnswer: {

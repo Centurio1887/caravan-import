@@ -6,12 +6,12 @@ import { Button } from '@/components/ui/button'
 import { CostRow } from '@/components/cost-row'
 import { NumberField } from '@/components/number-field'
 import type { ExchangeRate } from '@/lib/exchange-rate'
-
-const DUTY_RATE = 0.035
+   
+const DUTY_RATE_WITH_DECLARATION = 0
+const DUTY_RATE_WITHOUT_DECLARATION = 0.065
 const VAT_RATE = 0.19
 const HANDLING_FEE = 10
 const DEFAULT_RATE = 160
-
 function eur(value: number) {
   return new Intl.NumberFormat('de-DE', {
     style: 'currency',
@@ -31,6 +31,7 @@ export function ImportCalculator({ exchangeRate }: { exchangeRate: ExchangeRate 
   const [editRate, setEditRate] = useState(false)
   const [rateEdited, setRateEdited] = useState(false)
   const [comparison, setComparison] = useState('')
+  const [hasDeclaration, setHasDeclaration] = useState(true)
 
   const liveLoaded = exchangeRate.live
 
@@ -46,12 +47,13 @@ export function ImportCalculator({ exchangeRate }: { exchangeRate: ExchangeRate 
     const exchangeRate = toNumber(rate) || DEFAULT_RATE
     const yenTotal = toNumber(partPrice) + toNumber(shipping)
     const base = yenTotal / exchangeRate
-    const duty = base * DUTY_RATE
+    const dutyRate = hasDeclaration ? DUTY_RATE_WITH_DECLARATION : DUTY_RATE_WITHOUT_DECLARATION
+    const duty = base * dutyRate
     const vat = (base + duty) * VAT_RATE
     const total = base + duty + vat + HANDLING_FEE
 
     return { exchangeRate, yenTotal, base, duty, vat, total }
-  }, [partPrice, shipping, rate])
+  }, [partPrice, shipping, rate, hasDeclaration])
 
   const hasInput = toNumber(partPrice) > 0
   const comparePrice = toNumber(comparison)
@@ -77,7 +79,33 @@ export function ImportCalculator({ exchangeRate }: { exchangeRate: ExchangeRate 
             value={partPrice}
             onChange={setPartPrice}
             size="lg"
-          />
+          /><div className="flex flex-col gap-2">
+  <label className="text-sm font-medium text-secondary-foreground">
+    Ursprungserklärung des Verkäufers (EU-Japan EPA)
+  </label>
+  <div className="flex flex-col gap-2 sm:flex-row">
+    <button
+      type="button"
+      onClick={() => setHasDeclaration(true)}
+      className={`flex-1 rounded-xl border-2 px-4 py-3 text-left transition ${
+        hasDeclaration ? 'border-success bg-success/10' : 'border-border bg-secondary'
+      }`}
+    >
+      <p className="text-sm font-semibold">Mit Ursprungserklärung</p>
+      <p className="text-xs text-muted-foreground">Zollsatz 0 % · Standard bei den meisten Japan-Shops</p>
+    </button>
+    <button
+      type="button"
+      onClick={() => setHasDeclaration(false)}
+      className={`flex-1 rounded-xl border-2 px-4 py-3 text-left transition ${
+        !hasDeclaration ? 'border-success bg-success/10' : 'border-border bg-secondary'
+      }`}
+    >
+      <p className="text-sm font-semibold">Ohne / unbekannt</p>
+      <p className="text-xs text-muted-foreground">Regulärer Zollsatz 6,5 %</p>
+    </button>
+  </div>
+</div>
           <NumberField
             id="shipping"
             label="Geschätzte Versandkosten (Yen ¥)"
@@ -163,11 +191,12 @@ export function ImportCalculator({ exchangeRate }: { exchangeRate: ExchangeRate 
             hint={`${result.yenTotal.toLocaleString('de-DE')} ¥ ÷ ${result.exchangeRate}`}
             value={eur(result.base)}
           />
-          <CostRow
+           <CostRow
             label="Geschätzter Zoll"
-            hint="ca. 3,5 % auf den Warenwert"
+            hint={hasDeclaration ? '0 % mit Ursprungserklärung' : '6,5 % ohne Ursprungserklärung'}
             value={eur(result.duty)}
-          />
+/>
+          
           <CostRow
             label="Einfuhrumsatzsteuer"
             hint="19 % auf Warenwert + Zoll"
