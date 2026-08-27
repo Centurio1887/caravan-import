@@ -24,13 +24,13 @@ export function LegalFooter() {
 
   return (
     <footer className="mt-2 border-t border-border pt-6">
-      <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
-        Hinweis: Dies ist eine Richtwert-Schätzung basierend auf
-        Standard-Zollsätzen für KFZ-Teile (EU-Japan EPA). Der Zollsatz von
-        3,5 % ist ein Durchschnittswert für Kfz-Ersatzteile und kann je nach
-        genauer Warengruppe (Motor, Karosserie, Elektronik) abweichen.
+            <p className="text-pretty text-sm leading-relaxed text-muted-foreground">
+        Hinweis: Dies ist eine Richtwert-Schätzung. Der tatsächliche Zollsatz
+        hängt davon ab, ob eine gültige Ursprungserklärung nach dem
+        EU-Japan-EPA vorliegt (0 %) oder nicht (regulärer Satz 6,5 %).
+        Einzelne Warengruppen können abweichen. Der hinterlegte Wechselkurs
+        wird stündlich aktualisiert.
       </p>
-
       <nav className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         <button
           type="button"
