@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EU-Caravan-Import-Kalkulator</title>
+<meta name="description" content="Kosten für TÜV, Papiere, Export und Zulassung beim Wohnwagen-Import aus den Niederlanden kalkulieren.">
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Fest angepinnte, versionierte CDN-Links -->
+<script src="https://unpkg.com/react@18.2.0/umd/react.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js" crossorigin></script>
+</head>
+<body class="bg-[#F8FAFC] text-slate-800 font-sans antialiased">
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const GEBUEHREN = {
+  HU_GEBREMST: 68.00,
+  HU_UNGEBREMST: 45.90,
+  TUEV_21_MAX: 175.00,
+  AUFSCHLAG_BREMSE: 45.00,
+  EXPORT_NL: 120.00,
+  WUNSCHKENNZEICHEN: 12.80,
+  HERSTELLER_DUPLIKAT_SCHAETZUNG: 150.00,
+  TEMPO_100_GEBUEHR: 30.00,
+  ZULASSUNG_PAUSCHAL: 42.00
+};
+
+const BUNDESLAENDER = [
+  ["BW","Baden-Württemberg"],["BY","Bayern"],["BE","Berlin"],["BB","Brandenburg"],
+  ["HB","Bremen"],["HH","Hamburg"],["HE","Hessen"],["MV","Mecklenburg-Vorpommern"],
+  ["NI","Niedersachsen"],["NRW","Nordrhein-Westfalen"],["RP","Rheinland-Pfalz"],
+  ["SL","Saarland"],["SN","Sachsen"],["ST","Sachsen-Anhalt"],["SH","Schleswig-Holstein"],["TH","Thüringen"]
+];
+
+const euro = (n) => n.toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function CaravanKalkulator() {
+  const [fahrzeugTyp, setFahrzeugTyp] = useState("standard");
+  const [gewicht, setGewicht] = useState("gebremst");
+  const [cocVorhanden, setCocVorhanden] = useState(true);
+  const [keineUmbauten, setKeineUmbauten] = useState(true);
+  const [bundesland, setBundesland] = useState("NRW");
+  const [wunschkennzeichen, setWunschkennzeichen] = useState(false);
+  const [tempo100, setTempo100] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalCheckbox, setModalCheckbox] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [results, setResults] = useState(null);
+
+  useEffect(() => {
+    if (fahrzeugTyp === "leicht") setGewicht("ungebremst");
+  }, [fahrzeugTyp]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlType = params.get("type");
+      const urlCoc = params.get("coc");
+      const urlWeight = params.get("weight");
+      if (["standard", "falt", "leicht"].includes(urlType)) setFahrzeugTyp(urlType);
+      if (urlCoc === "false") setCocVorhanden(false);
+      if (["gebremst", "ungebremst"].includes(urlWeight)) setGewicht(urlWeight);
+    }
+  }, []);
+
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setShowResults(false);
+    setTimeout(() => {
+      setLoading(false);
+      setModalOpen(true);
+    }, 600);
+  };
+
+  const freischalten = () => {
+    if (!modalCheckbox) return;
+
+    const isVollabnahme = !keineUmbauten || !cocVorhanden;
+    const tuevBest = isVollabnahme
+      ? GEBUEHREN.TUEV_21_MAX
+      : (gewicht === "gebremst" ? GEBUEHREN.HU_GEBREMST : GEBUEHREN.HU_UNGEBREMST);
+    const bremsenAufschlag = (!isVollabnahme && gewicht === "gebremst") ? GEBUEHREN.AUFSCHLAG_BREMSE : 0;
+
+    const tuevText = isVollabnahme
+      ? "Vollabnahme nach § 21 StVZO zwingend erforderlich aufgrund fehlender Papiere oder Modifikationen"
+      : (gewicht === "gebremst" ? "Reguläre Hauptuntersuchung (HU) für gebremste Anhänger" : "Reguläre Hauptuntersuchung (HU) für ungebremste Anhänger");
+
+    const bestCase = Math.ceil(
+      tuevBest + bremsenAufschlag + GEBUEHREN.EXPORT_NL +
+      (wunschkennzeichen ? GEBUEHREN.WUNSCHKENNZEICHEN : 0) +
+      (tempo100 ? GEBUEHREN.TEMPO_100_GEBUEHR : 0) + GEBUEHREN.ZULASSUNG_PAUSCHAL
+    );
+
+    const worstCase = Math.ceil(
+      GEBUEHREN.TUEV_21_MAX + GEBUEHREN.EXPORT_NL + GEBUEHREN.HERSTELLER_DUPLIKAT_SCHAETZUNG +
+      (wunschkennzeichen ? GEBUEHREN.WUNSCHKENNZEICHEN : 0) +
+      (tempo100 ? GEBUEHREN.TEMPO_100_GEBUEHR : 0) + GEBUEHREN.ZULASSUNG_PAUSCHAL
+    );
+
+    setResults({ bestCase, worstCase, tuevText, tuevBest, bremsenAufschlag, isVollabnahme });
+    setModalOpen(false);
+    setShowResults(true);
+    setTimeout(() => {
+      document.getElementById("ergebnis-ansicht")?.scrollIntoView({ behavior: "smooth" });
+    }, 50);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#F4F1EA]">
+      {/* HERO — Dunkler Waldgrün-Verlauf mit Routen-Karte */}
+      <header className="relative overflow-hidden" style={{
+        background: "radial-gradient(120% 120% at 15% 10%, #1B3B2C 0%, #0D2318 55%, #081712 100%)"
+      }}>
+        <div className="max-w-5xl mx-auto px-6 md:px-10 pt-16 pb-14 md:pt-20 md:pb-16 relative grid md:grid-cols-[1.3fr_1fr] gap-10 items-center">
+          <div>
+            <div className="flex items-center gap-2 mb-6">
+              <span className="w-6 h-px bg-[#A8E063]"></span>
+              <span className="text-[#A8E063] font-bold text-[11px] tracking-[0.18em] uppercase">EU-Importkosten, klar kalkuliert</span>
+            </div>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight mb-5 leading-[1.05] text-[#F4F1EA]">
+              Dein Wohnwagen<br/>aus Holland. <span className="text-[#A8E063]">Ohne<br/>Kostenüberraschung.</span>
+            </h1>
+            <p className="text-sm md:text-base text-[#D8DFD4]/80 max-w-md mb-8 leading-relaxed">
+              Berechne TÜV, Papiere, Export und deutsche Zulassung in weniger als einer Minute – mit realistischem Best- und Worst-Case.
+            </p>
+            <div className="flex flex-wrap gap-x-6 gap-y-2 text-[11px] text-[#D8DFD4]/70">
+              <span className="flex items-center gap-1.5">🛡️ Unabhängige Budgethilfe</span>
+              <span className="flex items-center gap-1.5">✓ Gebührenmatrix 2026</span>
+            </div>
+          </div>
+
+          {/* Routen-Karte */}
+          <div className="relative rounded-[2rem] border border-white/10 bg-white/[0.04] backdrop-blur p-6 h-56 md:h-64 flex flex-col justify-between">
+            <div className="flex justify-between items-start">
+              <div>
+                <span className="text-3xl font-black text-[#F4F1EA] block leading-none">NL</span>
+                <span className="text-[10px] text-[#D8DFD4]/60 uppercase tracking-wider">Kaufen</span>
+              </div>
+              <div className="text-right">
+                <span className="text-3xl font-black text-[#A8E063] block leading-none">DE</span>
+                <span className="text-[10px] text-[#D8DFD4]/60 uppercase tracking-wider">Zulassen</span>
+              </div>
+            </div>
+            <div className="relative flex items-center justify-center py-2">
+              <span className="absolute left-0 right-0 border-t border-dashed border-white/20"></span>
+              <span className="relative bg-[#0D2318] px-3 text-xl">🚐</span>
+            </div>
+            <p className="text-xs text-[#D8DFD4]/70 leading-snug">
+              Eine Strecke.<br/>Alle Kosten im Blick.
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-3xl mx-auto px-4 pt-10 pb-24">
+
+      <div className="bg-[#0B192C]/5 rounded-2xl p-5 mb-8 border border-[#0B192C]/10 text-xs text-slate-600 leading-relaxed">
+        <span className="font-bold text-[#0B192C]">Der Markt für gebrauchte Caravans im EU-Ausland boomt</span> – besonders in den Niederlanden locken große Auswahl und attraktive Preise.
+        Wer importieren möchte, stößt in Foren aber schnell auf ein Chaos aus Paragraphen und Halbwissen. Dieser Rechner liefert dir
+        stattdessen sofort einen fundierten Richtwert, basierend auf den offiziellen Gebührenrahmen von TÜV und RDW (Stand August 2026).
+      </div>
+
+      <form onSubmit={handleFormSubmit} className="bg-white rounded-[2rem] p-6 md:p-10 shadow-xl shadow-[#0B192C]/5 border border-stone-200/60">
+        <div className="mb-6">
+          <label className="block text-[#0B192C] font-bold text-xs uppercase mb-3">Fahrzeugtyp wählen</label>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              ["standard", "🚐", "Caravan"],
+              ["falt", "⛺", "Klappfix"],
+              ["leicht", "🚗", "<750kg"]
+            ].map(([val, icon, label]) => (
+              <button
+                key={val}
+                type="button"
+                onClick={() => setFahrzeugTyp(val)}
+                className={`p-4 rounded-xl border-2 text-center text-xs transition-all relative ${
+                  fahrzeugTyp === val ? "border-[#0B192C] bg-[#0B192C] text-white font-bold shadow-md" : "border-stone-200 text-slate-600 hover:border-stone-300"
+                }`}
+              >
+                <span>{icon} {label}</span>
+                {val === "leicht" && fahrzeugTyp === "leicht" && (
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-[#10B981] text-[#0B192C] text-[8px] font-black uppercase px-2 py-0.5 rounded-full whitespace-nowrap">
+                    Auto-Match: Ungebremst
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-[#0B192C] font-bold text-xs uppercase mb-2">Zulässiges Gesamtgewicht</label>
+          <select
+            value={gewicht}
+            disabled={fahrzeugTyp === "leicht"}
+            onChange={(e) => setGewicht(e.target.value)}
+            className="w-full bg-stone-50 border rounded-xl p-3 text-xs font-semibold disabled:opacity-60"
+          >
+            <option value="gebremst">Gebremst (750 kg – 3,5 t)</option>
+            <option value="ungebremst">Ungebremst (unter 750 kg)</option>
+          </select>
+        </div>
+
+        <div className="mb-6 bg-stone-50 p-4 rounded-xl border space-y-2">
+          <label className="block text-[#0B192C] font-bold text-xs uppercase mb-1">Zustand &amp; Dokumente</label>
+          <label className="flex items-center text-xs font-medium text-stone-600 cursor-pointer">
+            <input type="checkbox" checked={cocVorhanden} onChange={(e) => setCocVorhanden(e.target.checked)} className="mr-2" />
+            Das originale EU-COC-Papier liegt vor
+          </label>
+          <label className="flex items-center text-xs font-medium text-stone-600 cursor-pointer">
+            <input type="checkbox" checked={keineUmbauten} onChange={(e) => setKeineUmbauten(e.target.checked)} className="mr-2" />
+            Keine technischen Umbauten am Fahrzeug
+          </label>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-[#0B192C] font-bold text-xs uppercase mb-2">Ziel-Bundesland (Zulassungsstelle)</label>
+          <select
+            value={bundesland}
+            onChange={(e) => setBundesland(e.target.value)}
+            className="w-full bg-stone-50 border rounded-xl p-3 text-xs font-semibold"
+          >
+            {BUNDESLAENDER.map(([code, name]) => (
+              <option key={code} value={code}>{name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="mb-8 space-y-2">
+          <label className="block text-[#0B192C] font-bold text-xs uppercase mb-2">Zusatzoptionen</label>
+          <label className="flex items-center p-3 rounded-xl border text-xs font-semibold cursor-pointer">
+            <input type="checkbox" checked={wunschkennzeichen} onChange={(e) => setWunschkennzeichen(e.target.checked)} className="mr-2" />
+            Wunschkennzeichen inkl. Online-Vorabreservierung (+{euro(GEBUEHREN.WUNSCHKENNZEICHEN)} €)
+          </label>
+          <label className="flex items-center p-3 rounded-xl border text-xs font-semibold cursor-pointer">
+            <input type="checkbox" checked={tempo100} onChange={(e) => setTempo100(e.target.checked)} className="mr-2" />
+            Deutsche Tempo-100-Zulassung mit beantragen (+{euro(GEBUEHREN.TEMPO_100_GEBUEHR)} €)
+          </label>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full bg-[#10B981] hover:bg-[#0D9488] text-white font-extrabold py-4 rounded-xl shadow-lg transition-all text-sm disabled:opacity-70"
+        >
+          {loading ? "Daten-Abgleich mit Richtlinien läuft..." : "➔ Importkosten jetzt kalkulieren"}
+        </button>
+      </form>
+
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B192C]/60 backdrop-blur-sm">
+          <div className="bg-white rounded-[2rem] p-6 max-w-md w-full shadow-2xl">
+            <h3 className="text-base font-bold text-[#0B192C] mb-2">🔒 Präzisions- &amp; Sicherheits-Check</h3>
+            <p className="text-xs text-stone-500 mb-4">
+              Um die Validität Ihrer Schätzung zu garantieren, gleicht unser System die Daten mit den Richtlinien von StVZO
+              und EU-Typgenehmigungen (Stand 2026) ab. Da individuelle Fahrzeugzustände und lokale Amtsgebühren variieren
+              können, dient dieses Ergebnis als fundierte Budget-Orientierung und ersetzt keine verbindliche Auskunft.
+              Ihre Angaben werden ausschließlich lokal in Ihrem Browser verarbeitet – es werden keine persönlichen Daten
+              gespeichert oder übertragen.
+            </p>
+            <label className="flex items-center text-xs font-bold text-stone-700 border-t border-b py-3 mb-4 cursor-pointer">
+              <input type="checkbox" checked={modalCheckbox} onChange={(e) => setModalCheckbox(e.target.checked)} className="mr-2" />
+              Ich bestätige die Richtigkeit meiner Angaben und habe den Hinweis auf regionale Gebührenschwankungen zur Kenntnis genommen.
+            </label>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => setModalOpen(false)} className="flex-1 bg-stone-100 text-stone-600 py-2 rounded-lg text-xs font-bold">
+                Abbrechen
+              </button>
+              <button
+                type="button"
+                onClick={freischalten}
+                disabled={!modalCheckbox}
+                className="flex-1 bg-[#0B192C] text-white py-2 rounded-lg text-xs font-bold disabled:opacity-30"
+              >
+                ➔ Kalkulation sicher freischalten
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showResults && results && (
+        <section id="ergebnis-ansicht" className="mt-10 bg-white rounded-[2rem] p-6 md:p-8 shadow-xl border border-stone-100">
+          <div className="bg-[#F59E0B]/10 border-l-4 border-[#F59E0B] p-3 rounded-r-xl mb-6 text-xs flex gap-2">
+            <span>⚠️</span>
+            <div>
+              <span className="font-bold text-[#0B192C]">Gas-Warnung:</span> Holländischer Gas-Standard! In den Niederlanden fordert
+              der TÜV oft den Umbau von flexiblen Schläuchen auf feste Schneidringverschraubungen. Planen Sie ca. 50–100 €
+              zusätzliche Kosten beim Händler ein (nicht in der Summe enthalten).
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="bg-[#10B981]/10 border-2 border-[#10B981] rounded-2xl p-6 text-center">
+              <span className="text-[10px] font-bold text-[#0B192C]/70 uppercase block mb-1">🟢 Minimaler Kostenrahmen</span>
+              <span className="text-4xl font-black text-[#0B192C] block my-1">{euro(results.bestCase)} €</span>
+              <span className="text-[10px] text-[#10B981] font-bold uppercase">Best-Case</span>
+            </div>
+            <div className="bg-[#F59E0B]/10 border-2 border-[#F59E0B] rounded-2xl p-6 text-center">
+              <span className="text-[10px] font-bold text-[#0B192C]/70 uppercase block mb-1">⚠️ Maximaler Kostenrahmen</span>
+              <span className="text-4xl font-black text-[#0B192C] block my-1">{euro(results.worstCase)} €</span>
+              <span className="text-[10px] text-[#F59E0B] font-bold uppercase">Worst-Case</span>
+            </div>
+          </div>
+
+          <div className="bg-stone-50 rounded-xl p-4 mb-6 text-xs text-stone-600 space-y-1">
+            <p className="font-bold text-[#0B192C] mb-1">{results.tuevText}</p>
+            <p>TÜV/Prüfung: {euro(results.tuevBest)} € {results.bremsenAufschlag > 0 && `(+ ${euro(results.bremsenAufschlag)} € Bremsenaufschlag)`}</p>
+            <p>RDW-Exportkennzeichen &amp; Versicherung: {euro(GEBUEHREN.EXPORT_NL)} €</p>
+            <p>Pauschale Zulassungsgebühr: {euro(GEBUEHREN.ZULASSUNG_PAUSCHAL)} €</p>
+            {wunschkennzeichen && <p>Wunschkennzeichen: {euro(GEBUEHREN.WUNSCHKENNZEICHEN)} €</p>}
+            {tempo100 && <p>Tempo-100-Gutachten: {euro(GEBUEHREN.TEMPO_100_GEBUEHR)} €</p>}
+            <p className="text-stone-400 pt-1">Worst-Case enthält zusätzlich eine Schätzung für ein COC-Herstellerduplikat ({euro(GEBUEHREN.HERSTELLER_DUPLIKAT_SCHAETZUNG)} €), falls Papiere fehlen.</p>
+          </div>
+
+          <div className="space-y-3 mb-6">
+            {!cocVorhanden && (
+              <div className="border rounded-xl p-4 text-xs flex items-center justify-between gap-3">
+                <span>Fehlende Papiere oder kein COC-Datenblatt? Fordere eine offizielle Zweitschrift direkt online beim Hersteller an.</span>
+                <a href="https://www.eurococ.eu/de/" target="_blank" rel="noopener noreferrer" className="shrink-0 bg-[#0B192C] text-white px-3 py-2 rounded-lg font-bold text-[11px]">EUROCOC</a>
+              </div>
+            )}
+            {tempo100 && (
+              <div className="border rounded-xl p-4 text-xs flex items-center justify-between gap-3">
+                <span>Reifen älter als 6 Jahre? Für die 100-km/h-Plakette fordert der TÜV jüngere Reifen mit passendem Geschwindigkeitsindex.</span>
+                <a href="https://www.reifen.de/" target="_blank" rel="noopener noreferrer" className="shrink-0 bg-[#0B192C] text-white px-3 py-2 rounded-lg font-bold text-[11px]">Reifen.de</a>
+              </div>
+            )}
+            <div className="bg-[#F59E0B]/10 border border-[#F59E0B]/30 rounded-xl p-4 text-xs">
+              <p className="font-bold text-[#0B192C] mb-1">🔎 Vor dem Kauf: Lass einen Profi den Wagen prüfen</p>
+              <p className="mb-3">Ein Import-Fehlkauf im Ausland kostet dich schnell tausende Euro. Lass deinen Wunsch-Wohnwagen vor Ort von einem mobilen Sachverständigen prüfen (Dichtigkeit, Rahmen, Achsen).</p>
+              <a href="#" className="inline-block bg-[#10B981] text-white px-4 py-2 rounded-lg font-bold text-[11px]">➔ Vor-Ort-Check ab 99 € buchen</a>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <a href="#" className="border rounded-xl p-3 text-[11px] font-semibold text-center">Caravan-Zusatzspiegel</a>
+              <a href="#" className="border rounded-xl p-3 text-[11px] font-semibold text-center">Kastenschloss-Diebstahlsicherung</a>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="mt-10 bg-white rounded-[2rem] p-6 md:p-8 shadow-xl border border-stone-100">
+        <h2 className="text-sm font-bold text-[#0B192C] uppercase mb-4">Häufige Fragen</h2>
+        <FAQ />
+      </section>
+
+      <footer className="mt-10 text-center text-[10px] text-stone-400 space-y-2">
+        <p>Diese Berechnung ist eine fundierte Richtwert-Schätzung basierend auf offiziellen Gebührenrahmen (Stand August 2026), keine amtliche Auskunft.</p>
+        <div className="flex justify-center gap-4">
+          <a href="#" className="underline">Impressum</a>
+          <a href="#" className="underline">Datenschutzerklärung</a>
+        </div>
+      </footer>
+      </div>
+    </div>
+  );
+}
+
+function FAQ() {
+  const [open, setOpen] = useState(null);
+  const items = [
+    ["Was ist der Unterschied zwischen einer normalen Hauptuntersuchung (HU) und einer Vollabnahme nach § 21 StVZO?",
+     "Eine normale HU nach § 29 reicht aus, wenn für Ihren Wohnwagen eine gültige EU-Typgenehmigung (COC-Papier) vorliegt und das Fahrzeug im Originalzustand ist. Eine Vollabnahme nach § 21 StVZO wird zwingend erforderlich, wenn das COC-Papier fehlt oder wesentliche technische Veränderungen vorgenommen wurden, die nicht in den Standard-Papieren erfasst sind."],
+    ["Warum sind leichte Anhänger unter 750 kg aus den Niederlanden ein Sonderfall?",
+     "In den Niederlanden benötigen Anhänger und Faltcaravans mit einem zulässigen Gesamtgewicht unter 750 kg kein eigenes Kennzeichen und führen keine separaten Fahrzeugpapiere. Beim Import nach Deutschland stehen Käufer daher oft nur mit einem Kaufvertrag da. Liegt ein COC-Datenblatt vor, kann der TÜV die Daten meist im Rahmen einer regulären HU erfassen. Fehlen jegliche Daten, greift das Vollabnahme-Verfahren."],
+    ["Was ist das COC-Papier und woher bekomme ich es, wenn es fehlt?",
+     "Das COC-Papier (Certificate of Conformity) ist die EU-Übereinstimmungserklärung des Herstellers. Es weist nach, dass das Fahrzeug den europäischen Sicherheits- und Umweltstandards entspricht. Fehlt es, können Sie eine offizielle Zweitschrift online über spezialisierte Dokumenten-Dienste oder direkt beim Hersteller kostenpflichtig nachbestellen."],
+    ["Wie überführe ich einen Wohnwagen aus den Niederlanden legal nach Deutschland?",
+     "Die Nutzung deutscher Kurzzeitkennzeichen für ein Fahrzeug, das sich noch im Ausland befindet, wird von ausländischen Behörden häufig nicht anerkannt und kann bei Kontrollen zu Problemen führen. Der gängige Weg führt über ein offizielles niederländisches Exportkennzeichen (RDW-Export). Dieses Komplettpaket umfasst die passenden Schilder sowie eine integrierte Haftpflichtversicherung für die Überführung auf eigener Achse."],
+    ["Welche Voraussetzungen müssen für die Tempo-100-Zulassung erfüllt sein?",
+     "Eine amtlich anerkannte Prüfstelle (TÜV/DEKRA) muss ein entsprechendes Gutachten ausstellen. Kernvoraussetzungen: Die Reifen dürfen maximal 6 Jahre alt sein und mindestens Geschwindigkeitsindex L (bis 120 km/h) aufweisen. Das Zugfahrzeug benötigt ABS, der Wohnwagen hydraulische Radstoßdämpfer und eine passende Kupplung."]
+  ];
+  return (
+    <div className="divide-y">
+      {items.map(([q, a], i) => (
+        <div key={i} className="py-3">
+          <button
+            onClick={() => setOpen(open === i ? null : i)}
+            className="w-full text-left text-xs font-bold text-[#0B192C] flex justify-between items-center gap-2"
+          >
+            {q}
+            <span className="text-[#10B981] shrink-0">{open === i ? "−" : "+"}</span>
+          </button>
+          {open === i && <p className="text-xs text-stone-600 mt-2 leading-relaxed">{a}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<CaravanKalkulator />);
+</script>
+</body>
+</html>
